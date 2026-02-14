@@ -1,5 +1,5 @@
 name: 'Langbly Translate'
-description: 'Translate JSON locale files and Markdown docs using the Langbly translation API. Google Translate v2 compatible, LLM-powered quality.'
+description: 'Translate JSON locale files and Markdown docs using Langbly API'
 author: 'Langbly'
 
 inputs:
