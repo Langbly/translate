@@ -1,0 +1,47 @@
+name: 'Langbly Translate'
+description: 'Translate JSON locale files and Markdown docs using the Langbly translation API. Google Translate v2 compatible, LLM-powered quality.'
+author: 'Langbly'
+
+inputs:
+  api-key:
+    description: 'Your Langbly API key (get one at langbly.com)'
+    required: true
+  source-language:
+    description: 'Source language code (ISO 639-1, e.g., en)'
+    required: true
+    default: 'en'
+  target-languages:
+    description: 'Comma-separated target language codes (e.g., fr,de,es,nl)'
+    required: true
+  files:
+    description: 'Glob pattern for source files to translate (e.g., locales/en.json)'
+    required: true
+  output-pattern:
+    description: 'Output path pattern with {lang} placeholder (e.g., locales/{lang}.json)'
+    required: true
+  format:
+    description: 'File format: json, markdown, or auto (detected from extension)'
+    required: false
+    default: 'auto'
+  create-pr:
+    description: 'Create a pull request with the translated files'
+    required: false
+    default: 'false'
+  dry-run:
+    description: 'Preview what would be translated without writing files'
+    required: false
+    default: 'false'
+
+outputs:
+  files-translated:
+    description: 'Total number of files written'
+  characters-used:
+    description: 'Total source characters sent to the API'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+
+branding:
+  icon: 'globe'
+  color: 'orange'
