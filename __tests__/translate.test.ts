@@ -56,9 +56,13 @@ describe("detectFormat", () => {
     expect(detectFormat("docs/intro.mdx")).toBe("markdown");
   });
 
+  it("detects YAML files", () => {
+    expect(detectFormat("locales/en.yaml")).toBe("yaml");
+    expect(detectFormat("locales/en.yml")).toBe("yaml");
+  });
+
   it("defaults to JSON for unknown extensions", () => {
     expect(detectFormat("file.txt")).toBe("json");
-    expect(detectFormat("file.yaml")).toBe("json");
   });
 });
 
