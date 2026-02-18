@@ -1,6 +1,6 @@
 # Langbly Translate - GitHub Action
 
-Automatically translate your JSON locale files and Markdown docs in CI/CD. Powered by [Langbly](https://langbly.com), an LLM-based translation API that's compatible with Google Translate v2.
+Automatically translate your JSON locale files and Markdown docs in CI/CD. Powered by [Langbly](https://langbly.com), a context-aware translation API that's compatible with Google Translate v2.
 
 ## Features
 
