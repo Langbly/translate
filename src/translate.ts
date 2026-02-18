@@ -13,7 +13,9 @@ import {
   mergeTranslations,
   FlatEntry,
 } from "./formats/json";
+import { parseYaml, serializeYaml } from "./formats/yaml";
 import { splitMarkdown, assembleMarkdown } from "./formats/markdown";
+import { protectPlaceholders, restorePlaceholders } from "./placeholders";
 import {
   detectFormat,
   resolveOutputPath,
@@ -28,7 +30,7 @@ export interface TranslateConfig {
   targetLanguages: string[];
   files: string[];
   outputPattern: string;
-  format: "json" | "markdown" | "auto";
+  format: "json" | "yaml" | "markdown" | "auto";
   dryRun: boolean;
 }
 
@@ -61,10 +63,15 @@ export async function translateFiles(
         config.files[0]
       );
 
-      const result =
-        format === "json"
-          ? await translateJsonFile(client, sourceFile, outputPath, config.sourceLanguage, lang, config.dryRun)
-          : await translateMarkdownFile(client, sourceFile, outputPath, config.sourceLanguage, lang, config.dryRun);
+      let result: { files: number; chars: number };
+
+      if (format === "markdown") {
+        result = await translateMarkdownFile(client, sourceFile, outputPath, config.sourceLanguage, lang, config.dryRun);
+      } else if (format === "yaml") {
+        result = await translateYamlFile(client, sourceFile, outputPath, config.sourceLanguage, lang, config.dryRun);
+      } else {
+        result = await translateJsonFile(client, sourceFile, outputPath, config.sourceLanguage, lang, config.dryRun);
+      }
 
       totalFiles += result.files;
       totalChars += result.chars;
@@ -116,8 +123,8 @@ async function translateJsonFile(
     return { files: 0, chars: countCharacters(toTranslate.map((e) => e.value)) };
   }
 
-  // Batch and translate
-  const translated = await batchTranslate(
+  // Batch and translate with placeholder protection
+  const translated = await batchTranslateWithPlaceholders(
     client,
     toTranslate,
     sourceLang,
@@ -133,6 +140,73 @@ async function translateJsonFile(
   // Write output
   await ensureDir(outputPath);
   await fs.writeFile(outputPath, JSON.stringify(merged, null, indent) + "\n");
+  core.info(`  ${targetLang}: Wrote ${outputPath}`);
+
+  return {
+    files: 1,
+    chars: countCharacters(toTranslate.map((e) => e.value)),
+  };
+}
+
+async function translateYamlFile(
+  client: LangblyClient,
+  sourceFile: string,
+  outputPath: string,
+  sourceLang: string,
+  targetLang: string,
+  dryRun: boolean
+): Promise<{ files: number; chars: number }> {
+  const sourceContent = await fs.readFile(sourceFile, "utf-8");
+  const sourceEntries = parseYaml(sourceContent);
+
+  if (sourceEntries.length === 0) {
+    core.info(`  ${targetLang}: No translatable strings found, skipping`);
+    return { files: 0, chars: 0 };
+  }
+
+  // Load existing target file for incremental translation
+  let existingTarget: Record<string, unknown> | null = null;
+  try {
+    const existing = await fs.readFile(outputPath, "utf-8");
+    const yaml = await import("js-yaml");
+    existingTarget = yaml.load(existing) as Record<string, unknown>;
+  } catch {
+    // File doesn't exist yet, translate everything
+  }
+
+  const toTranslate = computeDiff(sourceEntries, existingTarget);
+
+  if (toTranslate.length === 0) {
+    core.info(`  ${targetLang}: All keys already translated, skipping`);
+    return { files: 0, chars: 0 };
+  }
+
+  core.info(
+    `  ${targetLang}: ${toTranslate.length} keys to translate (${sourceEntries.length} total)`
+  );
+
+  if (dryRun) {
+    core.info(`  ${targetLang}: [dry-run] Would write to ${outputPath}`);
+    return { files: 0, chars: countCharacters(toTranslate.map((e) => e.value)) };
+  }
+
+  // Batch and translate with placeholder protection
+  const translated = await batchTranslateWithPlaceholders(
+    client,
+    toTranslate,
+    sourceLang,
+    targetLang
+  );
+
+  // Merge with existing translations
+  const merged = mergeTranslations(sourceEntries, translated, existingTarget);
+
+  // Convert merged object back to flat entries for YAML serialization
+  const mergedEntries = flattenJson(merged);
+  const yamlOutput = serializeYaml(mergedEntries);
+
+  await ensureDir(outputPath);
+  await fs.writeFile(outputPath, yamlOutput);
   core.info(`  ${targetLang}: Wrote ${outputPath}`);
 
   return {
@@ -181,16 +255,23 @@ async function translateMarkdownFile(
 }
 
 /**
- * Translate entries in batches using the Langbly API.
- * Returns a Map of key => translated value.
+ * Translate entries in batches with placeholder protection.
+ * Protects ICU placeholders ({name}, %s, etc.) before sending to the API,
+ * then restores them in the translated output.
  */
-async function batchTranslate(
+async function batchTranslateWithPlaceholders(
   client: LangblyClient,
   entries: FlatEntry[],
   sourceLang: string,
   targetLang: string
 ): Promise<Map<string, string>> {
-  const values = entries.map((e) => e.value);
+  // Protect placeholders in all values
+  const protectedEntries = entries.map((e) => ({
+    ...e,
+    protected: protectPlaceholders(e.value),
+  }));
+
+  const values = protectedEntries.map((e) => e.protected.text);
   const batches = batchStrings(values, 50, 10_000);
   const translated = new Map<string, string>();
 
@@ -205,12 +286,13 @@ async function batchTranslate(
       source: sourceLang,
     });
 
-    // Results come back as an array matching the input order
     const resultArray = Array.isArray(results) ? results : [results];
 
     for (const result of resultArray) {
-      const entry = entries[entryIndex];
-      translated.set(entry.key, result.text);
+      const entry = protectedEntries[entryIndex];
+      // Restore placeholders in the translated text
+      const restored = restorePlaceholders(result.text, entry.protected.placeholders);
+      translated.set(entry.key, restored);
       entryIndex++;
     }
   }

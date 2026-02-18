@@ -1,11 +1,12 @@
 # Langbly Translate - GitHub Action
 
-Automatically translate your JSON locale files and Markdown docs in CI/CD. Powered by [Langbly](https://langbly.com), a context-aware translation API that's compatible with Google Translate v2.
+Automatically translate your JSON/YAML locale files and Markdown docs in CI/CD. Powered by [Langbly](https://langbly.com), a context-aware translation API that's compatible with Google Translate v2.
 
 ## Features
 
-- **JSON locale files** - Supports nested and flat key structures (i18next, react-intl, etc.)
+- **JSON & YAML support** - Nested and flat key structures (i18next, react-intl, Rails, etc.)
 - **Markdown docs** - Translates body content while preserving frontmatter
+- **Placeholder preservation** - `{name}`, `%s`, `{{count}}`, `$t(key)` are never translated
 - **Incremental translation** - Only translates new or changed keys, preserving manual edits
 - **Multiple target languages** - Translate to any number of languages in a single run
 - **Dry-run mode** - Preview what would be translated before making changes
@@ -50,7 +51,7 @@ jobs:
 | `target-languages` | Yes | - | Comma-separated target languages (e.g., `fr,de,es,nl`) |
 | `files` | Yes | - | Glob pattern for source files (e.g., `locales/en.json`) |
 | `output-pattern` | Yes | - | Output path with `{lang}` placeholder (e.g., `locales/{lang}.json`) |
-| `format` | No | `auto` | File format: `json`, `markdown`, or `auto` |
+| `format` | No | `auto` | File format: `json`, `yaml`, `markdown`, or `auto` |
 | `create-pr` | No | `false` | Create a pull request with the translations |
 | `dry-run` | No | `false` | Preview what would be translated |
 
@@ -75,6 +76,20 @@ The most common use case. When your English locale file changes, translate it to
     target-languages: fr,de,es,nl,ja,ko,zh
     files: locales/en.json
     output-pattern: 'locales/{lang}.json'
+```
+
+### Translate YAML locale files
+
+Works with Rails-style YAML locale files:
+
+```yaml
+- uses: langbly/translate@v1
+  with:
+    api-key: ${{ secrets.LANGBLY_API_KEY }}
+    source-language: en
+    target-languages: fr,de,nl
+    files: config/locales/en.yml
+    output-pattern: 'config/locales/{lang}.yml'
 ```
 
 ### Translate Markdown documentation
@@ -123,6 +138,19 @@ Automatically create a PR with the translations for review:
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+## Placeholder Preservation
+
+The following placeholder formats are automatically protected during translation:
+
+| Format | Example | Used By |
+|--------|---------|---------|
+| `{name}` | `Hello, {name}!` | i18next, React Intl, FormatJS |
+| `{{name}}` | `Hello, {{name}}!` | Angular, Handlebars |
+| `%s`, `%d` | `%d items` | printf, Android |
+| `%1$s` | `%1$s of %2$s` | Android, Java |
+| `${var}` | `Hello, ${name}` | Template literals |
+| `$t(key)` | `$t(common.yes)` | i18next nested |
 
 ## Incremental Translation
 

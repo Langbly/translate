@@ -1,5 +1,5 @@
 name: 'Langbly Translate'
-description: 'Translate JSON locale files and Markdown docs using Langbly API'
+description: 'Translate JSON/YAML locale files and Markdown docs using Langbly API. Preserves ICU placeholders.'
 author: 'Langbly'
 
 inputs:
@@ -20,7 +20,7 @@ inputs:
     description: 'Output path pattern with {lang} placeholder (e.g., locales/{lang}.json)'
     required: true
   format:
-    description: 'File format: json, markdown, or auto (detected from extension)'
+    description: 'File format: json, yaml, markdown, or auto (detected from extension)'
     required: false
     default: 'auto'
   create-pr:

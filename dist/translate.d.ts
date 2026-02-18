@@ -8,7 +8,7 @@ export interface TranslateConfig {
     targetLanguages: string[];
     files: string[];
     outputPattern: string;
-    format: "json" | "markdown" | "auto";
+    format: "json" | "yaml" | "markdown" | "auto";
     dryRun: boolean;
 }
 export interface TranslateResult {

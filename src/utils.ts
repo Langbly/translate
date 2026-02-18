@@ -4,7 +4,7 @@
 
 import * as path from "path";
 
-export type FileFormat = "json" | "markdown";
+export type FileFormat = "json" | "yaml" | "markdown";
 
 /**
  * Detect file format from extension.
@@ -13,6 +13,9 @@ export function detectFormat(filePath: string): FileFormat {
   const ext = path.extname(filePath).toLowerCase();
   if (ext === ".md" || ext === ".mdx") {
     return "markdown";
+  }
+  if (ext === ".yml" || ext === ".yaml") {
+    return "yaml";
   }
   return "json";
 }

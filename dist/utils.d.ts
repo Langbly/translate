@@ -1,7 +1,7 @@
 /**
  * Utility functions for file handling and batching.
  */
-export type FileFormat = "json" | "markdown";
+export type FileFormat = "json" | "yaml" | "markdown";
 /**
  * Detect file format from extension.
  */

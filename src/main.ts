@@ -18,7 +18,7 @@ async function run(): Promise<void> {
     });
     const filesPattern = core.getInput("files", { required: true });
     const outputPattern = core.getInput("output-pattern", { required: true });
-    const format = core.getInput("format") as "json" | "markdown" | "auto";
+    const format = core.getInput("format") as "json" | "yaml" | "markdown" | "auto";
     const createPr = core.getBooleanInput("create-pr");
     const dryRun = core.getBooleanInput("dry-run");
 
